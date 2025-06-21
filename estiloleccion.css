@@ -29,4 +29,29 @@ body {
     color: white;
     font-size: 20px;
     z-index: 100;
+    text-shadow: 2px 2px 4px #000;
+}
+
+#restart-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+#restart-button:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.4);
 }
