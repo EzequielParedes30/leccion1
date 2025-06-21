@@ -6,7 +6,7 @@ const config = {
     obstacleSpeed: 3,
     obstacleSpawnRate: 100,
     trampolineMoveSpeed: 2,
-    floorY: 550 
+    floorY: 550
 };
 
 const canvas = document.getElementById('game-canvas');
@@ -14,38 +14,13 @@ const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score-display');
 const restartButton = document.getElementById('restart-button');
 
-let state = {
-    player: {
-        x: 185,
-        y: 100, 
-        width: 30,
-        height: 40,
-        velocityY: 0,
-        isJumping: false,
-        color: '#FF5733'
-    },
-    trampoline: {
-        x: 150,
-        y: 500, 
-        width: 100,
-        height: 10,
-        color: '#4CAF50'
-    },
-    obstacles: [],
-    keys: {},
-    score: 0,
-    frames: 0,
-    gameOver: false
-};
+let animationId;
+
+let state;
 
 function init() {
-    canvas.width = 400;
-    canvas.height = 600;
-    resetGame();
-    gameLoop();
-}
+    cancelAnimationFrame(animationId);
 
-function resetGame() {
     state = {
         player: {
             x: 185,
@@ -54,6 +29,7 @@ function resetGame() {
             height: 40,
             velocityY: 0,
             isJumping: false,
+            canJump: false,
             color: '#FF5733'
         },
         trampoline: {
@@ -69,18 +45,21 @@ function resetGame() {
         frames: 0,
         gameOver: false
     };
+
     scoreDisplay.textContent = "Puntos: 0";
+    gameLoop();
 }
 
-restartButton.addEventListener('click', resetGame);
+restartButton.addEventListener('click', init);
 
 window.addEventListener('keydown', (e) => {
     if (state.gameOver) return;
-    
+
     state.keys[e.key] = true;
-    if (e.key === ' ' && !state.player.isJumping) {
+    if (e.key === ' ' && state.player.canJump) {
         state.player.velocityY = config.jumpForce;
         state.player.isJumping = true;
+        state.player.canJump = false;
     }
 });
 
@@ -93,12 +72,12 @@ function update() {
 
     if (state.keys.ArrowLeft) state.player.x -= config.moveSpeed;
     if (state.keys.ArrowRight) state.player.x += config.moveSpeed;
-    
+
     state.player.x = Math.max(0, Math.min(canvas.width - state.player.width, state.player.x));
 
     state.player.velocityY += config.gravity;
     state.player.y += state.player.velocityY;
-    
+
     if (state.player.y + state.player.height > config.floorY) {
         state.gameOver = true;
         return;
@@ -108,13 +87,14 @@ function update() {
     if (state.trampoline.x <= 0 || state.trampoline.x + state.trampoline.width >= canvas.width) {
         config.trampolineMoveSpeed *= -1;
     }
-    
-    if (state.player.y + state.player.height >= state.trampoline.y && 
+
+    if (state.player.y + state.player.height >= state.trampoline.y &&
         state.player.y < state.trampoline.y &&
         state.player.x + state.player.width > state.trampoline.x &&
         state.player.x < state.trampoline.x + state.trampoline.width &&
         state.player.velocityY > 0) {
         state.player.velocityY = config.trampolineBounce;
+        state.player.canJump = true;
         state.score++;
         scoreDisplay.textContent = `Puntos: ${state.score}`;
     }
@@ -130,18 +110,19 @@ function update() {
             color: `hsl(${Math.random() * 360}, 70%, 50%)`
         });
     }
-    
-    for (let i = state.obstacles.length - 1; i >= 0; i--) {
-        state.obstacles[i].y += config.obstacleSpeed;
 
-        if (state.player.x < state.obstacles[i].x + state.obstacles[i].width &&
-            state.player.x + state.player.width > state.obstacles[i].x &&
-            state.player.y < state.obstacles[i].y + state.obstacles[i].height &&
-            state.player.y + state.player.height > state.obstacles[i].y) {
+    for (let i = state.obstacles.length - 1; i >= 0; i--) {
+        const obs = state.obstacles[i];
+        obs.y += config.obstacleSpeed;
+
+        if (state.player.x < obs.x + obs.width &&
+            state.player.x + state.player.width > obs.x &&
+            state.player.y < obs.y + obs.height &&
+            state.player.y + state.player.height > obs.y) {
             state.gameOver = true;
         }
-        
-        if (state.obstacles[i].y > canvas.height) {
+
+        if (obs.y > canvas.height) {
             state.obstacles.splice(i, 1);
         }
     }
@@ -150,22 +131,22 @@ function update() {
 function render() {
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
     ctx.fillRect(0, config.floorY, canvas.width, canvas.height - config.floorY);
-    
+
     ctx.fillStyle = state.player.color;
     ctx.fillRect(state.player.x, state.player.y, state.player.width, state.player.height);
-    
+
     ctx.fillStyle = '#FFC300';
     ctx.beginPath();
-    ctx.arc(state.player.x + state.player.width/2, state.player.y - 5, 10, 0, Math.PI * 2);
+    ctx.arc(state.player.x + state.player.width / 2, state.player.y - 5, 10, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.arc(state.player.x + state.player.width/2 - 4, state.player.y - 8, 2, 0, Math.PI * 2);
-    ctx.arc(state.player.x + state.player.width/2 + 4, state.player.y - 8, 2, 0, Math.PI * 2);
+    ctx.arc(state.player.x + state.player.width / 2 - 4, state.player.y - 8, 2, 0, Math.PI * 2);
+    ctx.arc(state.player.x + state.player.width / 2 + 4, state.player.y - 8, 2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = state.trampoline.color;
@@ -186,19 +167,19 @@ function render() {
     if (state.gameOver) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         ctx.fillStyle = '#FF0000';
         ctx.font = '30px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('¡PERDISTE!', canvas.width/2, canvas.height/2 - 30);
-        ctx.fillText(`Puntuación: ${state.score}`, canvas.width/2, canvas.height/2 + 20);
+        ctx.fillText('¡PERDISTE!', canvas.width / 2, canvas.height / 2 - 30);
+        ctx.fillText(`Puntuación: ${state.score}`, canvas.width / 2, canvas.height / 2 + 20);
     }
 }
 
 function gameLoop() {
     update();
     render();
-    requestAnimationFrame(gameLoop);
+    animationId = requestAnimationFrame(gameLoop);
 }
 
 init();
